@@ -9,7 +9,7 @@
 @inject ISnackbar Snackbar
 @inject MessageReceiver _messageReceiver;
 @inject ISocket _quickFixSocket;
-@inject AppSettings _appSettings;
+@inject IOptions<AppSettings> _appSettings;
 
 <h5>Replace Order</h5>
 
@@ -113,9 +113,9 @@
 
         _table = new List<TableStruct>();
 
-        if (_appSettings.ReplaceRequestScreenFields is null) return;
+        if (_appSettings.Value.ReplaceRequestScreenFields is null) return;
 
-        _appSettings.ReplaceRequestScreenFields.ForEach(f => _table.Add(new TableStruct
+        _appSettings.Value.ReplaceRequestScreenFields.ForEach(f => _table.Add(new TableStruct
             {
                 Id = f.Id,
                 FieldName = f.FieldName,

@@ -25,11 +25,9 @@ namespace quickfix_messages_simulator_core.Setup
         private delegate void StopCallback();
 
         private StopCallback _stopCallback;
-        private MessageHandler _messageHandler;
-        private AppSettings _appSettings; 
-        public QuickfixSocket(AppSettings appSettings)
+        private MessageHandler _messageHandler; 
+        public QuickfixSocket()
         {
-            _appSettings = appSettings;
             _messages = new ConcurrentQueue<MessageDto>();
             _messageReceptor = new(_messages);
             _messageHandler = new MessageHandler(_messageReceptor);
@@ -38,10 +36,12 @@ namespace quickfix_messages_simulator_core.Setup
         {
             _setings = new SessionSettings("session.cfg");
 
+            var connectionType = _setings.Get().GetString("CONNECTIONTYPE").ToUpper();
+
             var storeFactory = new FileStoreFactory(_setings);
             var logFactory = new FileLogFactory(_setings);
 
-            var socketCallback = DefSocket();
+            var socketCallback = DefSocket(connectionType);
 
             socketCallback(_messageHandler, storeFactory, logFactory);
 
@@ -106,11 +106,11 @@ namespace quickfix_messages_simulator_core.Setup
             return _messageHandler.SendMessage(message);
         }
 
-        private SocketCallBack DefSocket()
+        private SocketCallBack DefSocket(string quickfixSocketType)
         {
-            return _appSettings.QuickfixSocketType switch
+            return quickfixSocketType switch
             {
-                QuickfixSocketType.ACCEPTOR => new SocketCallBack(ConfigureAcceptor),
+                "ACCEPTOR" => new SocketCallBack(ConfigureAcceptor),
                 _ => new SocketCallBack(ConfigureInitiator)
             };
         }
