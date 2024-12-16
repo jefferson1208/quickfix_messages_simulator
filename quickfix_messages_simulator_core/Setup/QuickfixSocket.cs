@@ -1,4 +1,5 @@
 ﻿using QuickFix;
+using QuickFix.Config;
 using QuickFix.Fields;
 using QuickFix.Transport;
 using quickfix_messages_simulator_core.Dtos;
@@ -25,7 +26,7 @@ namespace quickfix_messages_simulator_core.Setup
         private delegate void StopCallback();
 
         private StopCallback _stopCallback;
-        private MessageHandler _messageHandler; 
+        private MessageHandler _messageHandler;
         public QuickfixSocket()
         {
             _messages = new ConcurrentQueue<MessageDto>();
@@ -35,6 +36,8 @@ namespace quickfix_messages_simulator_core.Setup
         public bool Configure()
         {
             _setings = new SessionSettings("session.cfg");
+
+            var dictSettings = _setings.Get();
 
             var connectionType = _setings.Get().GetString("CONNECTIONTYPE").ToUpper();
 
@@ -56,7 +59,8 @@ namespace quickfix_messages_simulator_core.Setup
 
         private Message CreateNewOrderMessage(NewOrderDto newOrder)
         {
-            var helper = new FixMessageFill("D", newOrder.Fields);
+            var session = _setings.GetSessions().FirstOrDefault();
+            var helper = new FixMessageFill(session, "D", newOrder.Fields);
 
             helper.SetMMProtectionReset()
                 .SetClOrdID()
