@@ -1,4 +1,5 @@
-﻿using QuickFix.Fields;
+﻿using QuickFix;
+using QuickFix.Fields;
 using quickfix_messages_simulator_core.Dtos;
 using quickfix_messages_simulator_core.Utils;
 
@@ -8,12 +9,15 @@ namespace quickfix_messages_simulator_core.MessageHandlers
     {
         public QuickFix.Message Message { get; private set; }
         private List<FieldMessageDto> _fields;
-        public FixMessageFill(string msgType, List<FieldMessageDto> fields)
+        public FixMessageFill(SessionID session, string msgType, List<FieldMessageDto> fields)
         {
             Message = new QuickFix.Message();
 
             Message.Header.SetField(new BeginString("FIX.4.4"));
             Message.Header.SetField(new MsgType(msgType));
+            Message.Header.SetField(new TargetCompID(session.TargetCompID));
+            Message.Header.SetField(new SenderCompID(session.SenderCompID));
+
             Message.SetField(new TransactTime(DateTime.Now));
 
             _fields = fields;
