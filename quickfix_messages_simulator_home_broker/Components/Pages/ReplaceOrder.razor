@@ -1,0 +1,130 @@
+﻿@page "/replace-order"
+@using System.Collections.Concurrent
+@using Microsoft.Extensions.Options
+@using quickfix_messages_simulator_core.Dtos
+@using quickfix_messages_simulator_core.Interfaces
+@using quickfix_messages_simulator_home_broker.Dtos
+@using quickfix_messages_simulator_interface.Setup
+@attribute [StreamRendering]
+@inject ISnackbar Snackbar
+@inject MessageReceiver _messageReceiver;
+@inject ISocket _quickFixSocket;
+@inject AppSettings _appSettings;
+
+<h5>Replace Order</h5>
+
+<div class="mt-3 mb-3">
+    <div class="row">
+        <div class="col-10">
+            <SimpleMultiselect Options="_fields"
+                               @bind-SelectedOptions="_selectedItems"
+                               CanFilter="true" />
+        </div>
+        <div class="col-sm-1">
+            <button class="btn btn-sm btn-outline-primary mt-1 ml-0" @onclick="ClearFilter">Clear</button>
+        </div>
+    </div>
+
+
+</div>
+<button class="btn btn-sm btn-outline-success mb-1" @onclick="Submit">Submit</button>
+<div class="row">
+
+    <OrderFields SelectedItems="@_selectedItems" Table="@_table" />
+
+
+    @if (_messages.Any())
+    {
+        <Messages ReceivedMessages="@_messages" />
+    }
+
+</div>
+@code {
+
+    private List<string> _selectedItems = new();
+    private List<string> _fields;
+    private List<TableStruct> _table;
+    private ConcurrentDictionary<string, MessageDto> _messages = new();
+
+    private ReplaceOrderDto _replace = new();
+
+    protected override void OnInitialized(){
+
+        CreateTableStruct();
+
+        _fields = _table.Select(t => t.FieldName).ToList();
+        _messageReceiver.Subscribe(new MessageReceiver.CallbackChannel(OnReceiveMessage));
+
+    }
+
+    private async void OnReceiveMessage(MessageDto message)
+    {
+
+        await InvokeAsync(() =>
+        {
+            _messages.TryAdd(message.Id, message);
+            StateHasChanged();
+        });
+    }
+
+    public void Submit()
+    {
+        //_isLoading = true;
+        bool filled = false;
+
+        foreach (var item in _table)
+        {
+            if (!string.IsNullOrEmpty(item.FieldValue))
+            {
+
+                _replace.Fields.Add(new FieldMessageDto
+                    {
+                        Tag = item.Id,
+                        Value = item.FieldValue,
+                        Type = item.Type
+                    });
+                filled = true;
+            }
+        }
+
+        if (filled)
+        {
+            var result = _quickFixSocket.ReplaceOrder(_replace);
+
+            if (result)
+                Snackbar.Add("Replace Order submitted", Severity.Success);
+            else
+                Snackbar.Add("Failure to submit Replace Order", Severity.Error);
+
+            _replace.Fields.Clear();
+            return;
+        }
+
+        Snackbar.Add("Replace Order data has not been filled", Severity.Warning);
+        _replace.Fields.ForEach(f => Console.WriteLine("TAG: " + f.Tag + " - Value: " + f.Value));
+
+        // _isLoading = false;
+    }
+
+    public void ClearFilter() => _selectedItems.Clear();
+
+    private void CreateTableStruct()
+    {
+
+        _table = new List<TableStruct>();
+
+        if (_appSettings.ReplaceRequestScreenFields is null) return;
+
+        _appSettings.ReplaceRequestScreenFields.ForEach(f => _table.Add(new TableStruct
+            {
+                Id = f.Id,
+                FieldName = f.FieldName,
+                FieldValue = "",
+                Type = f.Type,
+                SubType = f.SubType,
+                OptionValues = f.OptionValues,
+                FieldType = f.FieldType,
+                ControlType = f.ControlType
+            }));
+    }
+}

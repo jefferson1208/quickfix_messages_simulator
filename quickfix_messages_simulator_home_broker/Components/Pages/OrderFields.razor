@@ -1,0 +1,117 @@
+﻿@using quickfix_messages_simulator_home_broker.Dtos
+@using static quickfix_messages_simulator_home_broker.Components.Pages.NewOrder
+<div class="col" style="max-height: 500px;overflow: auto;max-width: 500px;margin-bottom: 20px;margin-right: 10px;font-size: 12px">
+
+    <div class="table-responsive-sm w-100">
+        <table class="table table-bordered border-dark">
+
+            <tbody>
+
+                @foreach (var item in Table)
+                {
+                    @if (SelectedItems.Any())
+                    {
+                        if (SelectedItems.Contains(item.FieldName))
+                        {
+                            <tr>
+
+                                <th scope="row" style="white-space:nowrap;">@GetID(item)</th>
+                                <th scope="row">@item.FieldName</th>
+                                <td style="width: 100%;font-size: 12px;align-content: center;padding:0;position:relative">
+
+                                    @if (item.FieldType != "group")
+                                    {
+                                        @if (item.ControlType == "option")
+                                        {
+                                            <select class="form-select" @bind="item.FieldValue">
+                                                <option value="-1" selected>-</option>
+                                                @foreach (var opt in GetOptionValues(item.OptionValues))
+                                                {
+                                                    <option value="@opt.Value">@opt.Label</option>
+                                                }
+
+                                            </select>
+                                        }
+                                        else
+                                        {
+                                            <input type="text" style="width: 100%; height: 100%;border: none;top:0px;position: absolute;padding-left: 5px" @bind-value="item.FieldValue" />
+                                        }
+                                    }
+
+
+                                </td>
+                            </tr>
+
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+
+                            <th scope="row" style="white-space:nowrap;">@GetID(item)</th>
+                            <th scope="row">@item.FieldName</th>
+
+                            <td style="width: 100%;font-size: 12px;align-content: center;padding:0;position:relative">
+
+                                @if (item.FieldType != "group")
+                                {
+                                    @if (item.ControlType == "option")
+                                    {
+                                        <select class="form-select" @bind="item.FieldValue">
+                                            <option value="-1" selected>-</option>
+                                            @foreach (var opt in GetOptionValues(item.OptionValues))
+                                            {
+                                                <option value="@opt.Value">@opt.Label</option>
+                                            }
+
+                                        </select>
+                                    }
+                                    else
+                                    {
+                                        <input type="text" style="width: 100%; height: 100%;border: none;top:0px;position: absolute;padding-left: 5px" @bind-value="item.FieldValue" />
+                                    }
+                                }
+
+                            </td>
+                            
+
+                        </tr>
+                    }
+
+                }
+
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@code {
+    [Parameter]
+    public List<string> SelectedItems { get; set; }
+
+    [Parameter]
+    public List<TableStruct> Table { get; set; }
+
+    private string GetID(TableStruct item) => item.SubType == "group" ? "=> " + item.Id : item.Id;
+
+    private List<dynamic> GetOptionValues(string definition)
+    {
+        var list = new List<dynamic>();
+        var splitByComma = definition.Split(";");
+
+        for (int i = 0; i < splitByComma.Length; i++)
+        {
+            var item = splitByComma[i];
+
+            var splitByEqual = item.Split('=');
+
+            list.Add(new
+            {
+                Value = splitByEqual[0],
+                Label = splitByEqual[1]
+            });
+        }
+
+        return list;
+    }
+}

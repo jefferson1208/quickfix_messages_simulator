@@ -1,0 +1,150 @@
+﻿@page "/new-order"
+@using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage
+@using Microsoft.Extensions.Options
+@using System.Collections.Concurrent
+@using System.Threading
+@using quickfix_messages_simulator_core.Dtos
+@using quickfix_messages_simulator_core.Interfaces
+@using quickfix_messages_simulator_home_broker.Dtos
+@using quickfix_messages_simulator_interface.Setup
+@rendermode InteractiveServer
+@inject AppSettings _appSettings;
+@inject ISnackbar Snackbar
+@inject MessageReceiver _messageReceiver;
+@inject ISocket _quickFixSocket;
+
+<h5>New Order Single</h5>
+
+<div class="mt-3 mb-3">
+    <div class="row">
+        <div class="col-10">
+            <SimpleMultiselect Options="_fields"
+                               @bind-SelectedOptions="_selectedItems"
+                               CanFilter="true" />
+        </div>
+        <div class="col-sm-1">
+            <button class="btn btn-sm btn-outline-primary mt-1 ml-0" @onclick="ClearFilter">Clear</button>
+        </div>
+   
+    </div>
+
+
+</div>
+
+@if (_isLoading)
+{
+    <ProgressBar />
+}
+
+<button class="btn btn-sm btn-outline-success mb-1" @onclick="Submit">Submit</button>
+<div class="row">
+
+    <OrderFields SelectedItems="@_selectedItems" Table="@_table"/>
+    
+    
+    @if (_messages.Any())
+    {
+        <Messages ReceivedMessages="@_messages" />
+    }
+
+</div>
+
+@code{
+
+    private List<string> _selectedItems = new();
+    private List<string> _fields;
+    private List<TableStruct> _table;
+
+    private NewOrderDto _newOrder = new();
+
+    private bool _isLoading = false;
+    private ConcurrentDictionary<string, MessageDto> _messages = new();
+
+    protected override void OnInitialized(){
+
+        CreateTableStruct();
+
+        _fields = _table.Select(t => t.FieldName).ToList();
+        _messageReceiver.Subscribe(new MessageReceiver.CallbackChannel(OnReceiveMessage));
+
+    }
+
+    private async void OnReceiveMessage(MessageDto message)
+    {
+
+        await InvokeAsync(() =>
+        {
+            _messages.TryAdd(message.Id, message);
+            StateHasChanged();
+        });
+    }
+    public void ClearFilter() => _selectedItems.Clear();
+
+    public void Submit()
+    {
+        //_isLoading = true;
+        bool filled = false;
+
+        foreach (var item in _table)
+        {
+            if (!string.IsNullOrEmpty(item.FieldValue)){
+
+                _newOrder.Fields.Add(new FieldMessageDto
+                {
+                    Tag = item.Id,
+                    Value = item.FieldValue,
+                    Type = item.Type,
+                    SubType = item.SubType,
+                    SubTypeTag = item.SubTypeTag
+                });
+                filled = true;
+            }
+        }
+
+        if (filled)
+        {
+            var result = _quickFixSocket.SendOrder(_newOrder);
+
+            if(result)
+                Snackbar.Add("New Order Single submitted", Severity.Success);
+            else
+                Snackbar.Add("Failure to submit New Order Single", Severity.Error);
+
+            _newOrder.Fields.Clear();
+            return;
+        }
+
+        Snackbar.Add("New Order Single data has not been filled", Severity.Warning);
+        _newOrder.Fields.ForEach(f => Console.WriteLine("TAG: " + f.Tag + " - Value: "+f.Value));
+        
+        // _isLoading = false;
+    }
+
+    public dynamic GetValue(string fieldName){
+        var item = _table.First(v => v.FieldName == fieldName);
+        return item.FieldValue;
+    }
+
+    
+
+    private void CreateTableStruct(){
+
+        _table = new List<TableStruct>();
+
+        if (_appSettings.NewOrderSingleScreenFields is null) return;
+
+        _appSettings.NewOrderSingleScreenFields.ForEach(f => _table.Add(new TableStruct
+        {
+            Id = f.Id,
+            FieldName = f.FieldName,
+            FieldValue = "",
+            Type = f.Type,
+            SubType = f.SubType,
+            OptionValues = f.OptionValues,
+            FieldType=f.FieldType,
+                ControlType = f.ControlType,
+                SubTypeTag = f.SubTypeTag
+               
+        }));
+    }
+}

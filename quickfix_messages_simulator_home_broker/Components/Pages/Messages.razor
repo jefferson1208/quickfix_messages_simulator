@@ -1,0 +1,20 @@
+﻿@using System.Collections.Concurrent
+@using quickfix_messages_simulator_core.Dtos
+<div class="col" style="max-height: 500px; border:1px solid black;overflow: auto;margin-bottom: 50px;padding-top: 5px">
+    @foreach (var message in ReceivedMessages)
+    {
+        if (message.Value.Direction == quickfix_messages_simulator_core.Enums.Direction.SENT)
+        {
+            <p style="margin: 0;font-size: 12px;color: red">@message.Value.GetMessage()</p>
+        }
+        else
+        {
+            <p style="margin: 0;font-size: 12px;color: blue">@message.Value.GetMessage()</p>
+        }
+    }
+</div>
+
+@code {
+    [Parameter]
+    public ConcurrentDictionary<string, MessageDto>? ReceivedMessages { get; set; }
+}
