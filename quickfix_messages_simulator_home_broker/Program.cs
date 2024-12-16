@@ -8,20 +8,15 @@ using quickfix_messages_simulator_interface.Setup;
 var builder = WebApplication.CreateBuilder(args);
 
 var config = builder.Configuration;
-var appSettingsSection = config.GetSection("AppSettings");
-var appSettings = new AppSettings();
-appSettingsSection.Bind(appSettings);
-
-//builder.Services.Configure<AppSettings>(config.GetSection("AppSettings"));
+builder.Services.Configure<AppSettings>(config.GetSection("AppSettings"));
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
-var quickfixSocket = new QuickfixSocket(appSettings);
+var quickfixSocket = new QuickfixSocket();
 quickfixSocket.Configure();
 
-builder.Services.AddSingleton(appSettings);
 builder.Services.AddSingleton<ISocket>(quickfixSocket);
 builder.Services.AddSingleton<MessageReceiver>();
 

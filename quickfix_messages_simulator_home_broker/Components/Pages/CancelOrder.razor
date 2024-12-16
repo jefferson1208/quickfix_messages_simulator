@@ -9,7 +9,7 @@
 @inject ISnackbar Snackbar
 @inject MessageReceiver _messageReceiver;
 @inject ISocket _quickFixSocket;
-@inject AppSettings _appSettings;
+@inject IOptions<AppSettings> _appSettings;
 
 <h5>Cancel Order</h5>
 
@@ -115,9 +115,9 @@
 
         _table = new List<TableStruct>();
 
-        if (_appSettings.CancelRequestScreenFields is null) return;
+        if (_appSettings.Value.CancelRequestScreenFields is null) return;
 
-        _appSettings.CancelRequestScreenFields.ForEach(f => _table.Add(new TableStruct
+        _appSettings.Value.CancelRequestScreenFields.ForEach(f => _table.Add(new TableStruct
             {
                 Id = f.Id,
                 FieldName = f.FieldName,
